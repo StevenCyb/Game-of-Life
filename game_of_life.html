@@ -1,0 +1,245 @@
+<html>
+	<!-- By Steven Cybinski (2019) -->
+	<head>
+		<meta name="author" content="Anna Lyse">
+		<meta name="date" content="2019-05-08T23:20:00+02:00">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	
+		<title>Game-Of-Life</title>
+		<style>
+			body {
+				margin: 0;
+				border-spacing: 0;
+				overflow: hidden;
+			}
+			#field {
+				background: #333333;
+				width: 100vw;
+				height: 100vh;
+			}
+			td { transition: background 0.02s ease; }
+			#navigation {
+				background: rgba(0, 0, 0, 0.3);
+				width: 100vw;
+				height: 130px;
+				padding-top: 10px;
+				position: absolute;
+				z-index: 1;
+				top: -100px;
+				transition: opacity 0.5s ease, top 0.5s ease;
+				opacity: 0.5;
+			}
+			#navigation:hover {
+				opacity: 1;
+				top: 0;
+			}
+			.navigation-item {
+				color: #eeeeee;
+				height: 30px;
+				width: 100vw;
+				text-align: center;
+				overflow:hidden;
+			}
+			.arrow-up {
+				font-size: 35px;
+				font-weight: bold;
+				transform: rotate(-90deg);
+			}
+			/* Slider source https://www.w3schools.com/howto/howto_js_rangeslider.asp */
+			.slider {
+				z-index: 2;
+				-webkit-appearance: none;
+				width: 70%;
+				height: 16px;
+				border-radius: 8px;
+				border: 1px solid #eeeeee;
+				background: transparent;
+				outline: none;
+				opacity: 0.7;
+				-webkit-transition: .2s;
+				transition: opacity .2s;
+			}
+			.slider::-webkit-slider-thumb {
+				-webkit-appearance: none;
+				appearance: none;
+				width: 14px;
+				height: 14px;
+				border-radius: 50%; 
+				background: #eeeeee;
+				cursor: pointer;
+			}
+			.slider::-moz-range-thumb {
+				width: 14px;
+				height: 14px;
+				border-radius: 50%;
+				background: #eeeeee;
+				cursor: pointer;
+			}
+		</style>
+		<script>
+			class Cell {
+				constructor(element) {
+					this.element = element;
+					this.state = false;
+					this.newState = false;
+					this.element.style.background = "#333333";
+				}
+				
+				setState(newState) {
+					this.newState = newState;
+				}
+				
+				update() {
+					this.state = this.newState;
+					if(this.state) {
+						this.element.style.background = "#ff392e";
+					} else {
+						this.element.style.background = "#333333";
+					}
+				}
+				
+				getState() {
+					return this.state;
+				}
+			}
+			class Grid {
+				constructor(rows, columns, tableElement) {
+					this.rows = rows;
+					this.columns = columns;
+					this.grid = new Array(rows);
+					for (var i = 0; i < rows; i++) {
+						this.grid[i] = new Array(columns);
+					}
+					this.drawGrid(tableElement);
+				}
+				
+				drawGrid(tableElement) {
+					for(var r = 0; r < this.grid.length; r++) {
+						var tr = document.createElement('tr');
+						for(var c = 0; c < this.grid[r].length; c++) {
+							var td = document.createElement('td');
+							this.grid[r][c] = new Cell(td);
+							tr.appendChild(td);
+						}
+						tableElement.appendChild(tr);
+					}
+				}
+				
+				setRandomStartStates(rows, columns, startSeed) {
+					for(var i=0; i < parseInt((rows*columns) * startSeed); i++) {
+						var r = Math.floor(Math.random() * rows);
+						var c = Math.floor(Math.random() * columns);
+						this.grid[r][c].setState(true);
+						this.grid[r][c].update();
+					}
+				}
+				
+				update() {
+					for(var r = 0; r < this.rows; r++) {
+						for(var c = 0; c < this.columns; c++) {
+							this.grid[r][c].update();
+						}
+					}
+				}
+				
+				getCell(row, column) {
+					return this.grid[row][column];
+				}
+				
+				isCellSet(row, column) {
+					return (row >= 0 && row < this.grid.length && column >= 0 && column < this.grid[row].length && this.grid[row][column].getState());
+				}
+			}
+			class GameOfLife {
+				constructor(rows, columns, startSeed, tableElement) {
+					tableElement.innerHTML = "";
+					this.rows = rows;
+					this.columns = columns;
+					this.grid = new Grid(rows, columns, tableElement);
+					this.grid.setRandomStartStates(rows, columns, startSeed);
+				}
+				
+				nextGeneration() {
+					for(var r = 0; r < this.rows; r++) {
+						for(var c = 0; c < this.columns; c++) {
+							var neightboursAmount = this.countNeightbours(r, c);
+							if(neightboursAmount == 3 || (neightboursAmount == 2 && this.grid.getCell(r, c).getState())) {
+								this.grid.getCell(r, c).setState(true);
+							} else {
+								this.grid.getCell(r, c).setState(false);
+							}
+						}
+					}
+					this.grid.update();
+				}
+				
+				countNeightbours(row, column) {
+					var neightboursAmount = 0;
+					for(var rm=-1; rm<=1; rm++) {
+						for(var cm=-1; cm<=1; cm++) {
+							if(!(rm == 0 && cm == 0) && this.grid.isCellSet(row + rm, column + cm)) {
+								neightboursAmount++;
+							}
+						}
+					}
+					return neightboursAmount;
+				}
+			}
+			var gameOfLife = null, fieldSizeRange = null, startSeedRange = null, simulationSpeedRange = null, drawInterval = null;
+			function initialization() {
+				stopDrawInterval();
+				gameOfLife = null;
+				if(drawInterval != null) {
+					clearInterval(drawInterval);
+					drawInterval = null;
+				}
+				var size = parseInt(fieldSizeRange.value);
+				var startSeed = parseFloat(startSeedRange.value / 100);
+				gameOfLife = new GameOfLife(size, size, startSeed, document.getElementById("field"));
+				initializationDrawInterval();
+			}
+			function initializationDrawInterval() {
+				stopDrawInterval();
+				drawInterval = setInterval(function(){
+					if(gameOfLife != null) {
+						gameOfLife.nextGeneration();
+					}
+				}, parseInt(simulationSpeedRange.value));
+			}
+			function stopDrawInterval() {
+				if(drawInterval != null) {
+					clearInterval(drawInterval);
+					drawInterval = null;
+				}
+			}
+			window.addEventListener("load", function(){
+				fieldSizeRange = document.getElementById("field-size-range");
+				startSeedRange = document.getElementById("start-seed-range");
+				simulationSpeedRange = document.getElementById("sim-speed-range");
+				initialization();
+			});
+		</script>
+	</head>
+	<body>
+		<div id="navigation">
+			<div class="navigation-item">
+				<div class="slidecontainer">
+					Field-Size <input type="range" min="3" max="150" value="50" class="slider" id="field-size-range" onchange="initialization();">
+				</div>
+			</div>
+			<div class="navigation-item">
+				<div class="slidecontainer">
+					Start-Seed <input type="range" min="10" max="90" value="30" class="slider" id="start-seed-range" onchange="initialization();">
+				</div>
+			</div>
+			<div class="navigation-item">
+				<div class="slidecontainer">
+					Sim-Speed <input type="range" min="30" max="1000" value="30" step="10" class="slider" id="sim-speed-range" onchange="initializationDrawInterval();">
+				</div>
+			</div>
+			<div class="navigation-item"><div class="arrow-up">&lsaquo;</div></div>
+		</div>
+		<table id="field">
+		</table>
+	</body>
+</html>
