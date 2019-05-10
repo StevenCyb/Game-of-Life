@@ -5,4 +5,5 @@ If you have any questions, please feel free to contact me.
 
 ## How to use it
 You can run it by downloading and open the HTML file in your favorite browser (IE could possibly have problems).
-If you hover the upper arrow, a menu will appear. In this menu you can change the size of the field, the number of living cells and the speed.
+If you hover the upper arrow, a menu will appear (see right). In this menu you can change the size of the field, the number of living cells and the speed.
+![GUI-Preview](/images/preview.jpg)
